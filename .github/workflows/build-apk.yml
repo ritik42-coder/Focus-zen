@@ -38,42 +38,15 @@ jobs:
       - name: Add Android platform
         run: npx cap add android
 
-      - name: Native code, icons and permissions
+      - name: Native code and resources
         run: |
           set -e
           D=android/app/src/main/java/com/zenfocus/app
           RES=android/app/src/main/res
-          mkdir -p "$D"
-          cp native/UsagePlugin.java native/BlockService.java native/MainActivity.java "$D/"
-          for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
-            mkdir -p "$RES/mipmap-$d"
-            cp native/res/mipmap-$d/*.png "$RES/mipmap-$d/"
-          done
-          python3 - <<'PY'
-          p = 'android/app/src/main/AndroidManifest.xml'
-          s = open(p).read()
-          perms = (
-              '<uses-permission android:name="android.permission.PACKAGE_USAGE_STATS"/>\n'
-              '    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY"/>\n'
-              '    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>\n'
-              '    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>\n'
-              '    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE"/>\n'
-              '    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>\n    '
-          )
-          if 'PACKAGE_USAGE_STATS' not in s:
-              s = s.replace('<application', perms + '<application', 1)
-          service = (
-              '<service android:name=".BlockService" android:exported="false" '
-              'android:foregroundServiceType="specialUse">\n'
-              '            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" '
-              'android:value="Screen time limit enforcement"/>\n'
-              '        </service>\n    '
-          )
-          if 'BlockService' not in s:
-              s = s.replace('</application>', service + '</application>', 1)
-          open(p, 'w').write(s)
-          print('manifest patched')
-          PY
+          mkdir -p "$D" "$RES"
+          cp native/*.java "$D/"
+          cp -r native/res/. "$RES/"
+          python3 native/manifest_patch.py
 
       - name: Sync and build
         run: |
